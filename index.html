@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>BuildClinical → Tracker</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #F7F8FA;
+      --surface:   #FFFFFF;
+      --border:    #E4E7EC;
+      --accent:    #1A56DB;
+      --accent-lt: #EBF2FF;
+      --green:     #057A55;
+      --green-lt:  #DEF7EC;
+      --red:       #C81E1E;
+      --red-lt:    #FDE8E8;
+      --yellow-lt: #FEF3C7;
+      --yellow:    #92400E;
+      --text:      #111827;
+      --muted:     #6B7280;
+      --mono:      'JetBrains Mono', monospace;
+      --sans:      'Inter', sans-serif;
+    }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    .wrapper {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      margin-bottom: 40px;
+    }
+
+    .header-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .header h1 {
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .header p {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* Card */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 20px;
+    }
+
+    .card-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-title .step {
+      width: 22px;
+      height: 22px;
+      background: var(--accent);
+      color: white;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* File zones */
+    .file-zone {
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .file-zone:hover, .file-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-lt);
+    }
+
+    .file-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .file-zone .icon {
+      font-size: 24px;
+      margin-bottom: 6px;
+    }
+
+    .file-zone .label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+
+    .file-zone .sublabel {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .file-zone.selected {
+      border-color: var(--green);
+      background: var(--green-lt);
+    }
+
+    .file-zone.selected .label {
+      color: var(--green);
+    }
+
+    /* Button */
+    .btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      margin-top: 4px;
+    }
+
+    .btn:hover { opacity: 0.88; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Progress */
+    .progress-wrap {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      background: var(--accent-lt);
+      border-radius: 8px;
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--accent);
+      font-weight: 500;
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--accent);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Results */
+    .results { display: none; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .stat-num {
+      font-size: 28px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .stat.green .stat-num { color: var(--green); }
+    .stat.yellow .stat-num { color: var(--yellow); }
+    .stat.red .stat-num { color: var(--red); }
+
+    /* Log */
+    .log-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .log {
+      background: #0F172A;
+      border-radius: 8px;
+      padding: 16px;
+      max-height: 260px;
+      overflow-y: auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.7;
+    }
+
+    .log-line { display: flex; gap: 10px; }
+    .log-line .tag { flex-shrink: 0; font-weight: 500; }
+    .log-line.added .tag { color: #4ADE80; }
+    .log-line.dup .tag { color: #FBBF24; }
+    .log-line.skip .tag { color: #F87171; }
+    .log-line .info { color: #94A3B8; }
+    .log-line .sheet { color: #7DD3FC; }
+
+    /* Download */
+    .download-btn {
+      display: block;
+      width: 100%;
+      padding: 13px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--sans);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+      margin-top: 16px;
+      transition: opacity 0.15s;
+    }
+
+    .download-btn:hover { opacity: 0.88; }
+
+
+    .toggle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-top: 16px;
+      cursor: pointer;
+    }
+
+    .toggle-wrap input[type=checkbox] { 
+      width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent);
+    }
+
+    .toggle-wrap .toggle-label { font-size: 13px; font-weight: 500; }
+    .toggle-wrap .toggle-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* Footer */
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 32px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+
+    <div class="header">
+      <div class="header-eyebrow">Courtney Lab · UC San Diego Health</div>
+      <h1>BuildClinical → Participant Tracker</h1>
+      <p>Upload your BuildClinical CSV export and Excel tracker. The script routes each participant to the correct sheet, checks for duplicates, and formats everything automatically.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="step">1</span>
+        Upload your BuildClinical CSV export
+      </div>
+      <div class="file-zone" id="csvZone">
+        <input type="file" id="csvInput" accept=".csv" />
+        <div class="icon">📄</div>
+        <div class="label">Click to upload CSV</div>
+        <div class="sublabel">BuildClinical export — leads.csv</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="step">2</span>
+        Upload your Excel participant tracker
+      </div>
+      <div class="file-zone" id="excelZone">
+        <input type="file" id="excelInput" accept=".xlsx" />
+        <div class="icon">📊</div>
+        <div class="label">Click to upload Excel tracker</div>
+        <div class="sublabel">VAREN_Participant_Contact_Key.xlsx</div>
+      </div>
+    </div>
+
+        <label class="toggle-wrap">
+      <input type="checkbox" id="overwriteToggle" />
+      <div>
+        <div class="toggle-label">Overwrite original tracker</div>
+        <div class="toggle-sub">On: saves back to the same file. Off: creates a new updated copy.</div>
+      </div>
+    </label>
+
+<button class="btn" id="runBtn" disabled>Run Automation</button>
+
+    <div class="progress-wrap" id="progress">
+      <div class="spinner"></div>
+      Processing participants...
+    </div>
+
+    <div class="results card" id="results" style="margin-top:20px;">
+      <div class="card-title">Results</div>
+
+      <div class="summary-grid">
+        <div class="stat green">
+          <div class="stat-num" id="addedCount">0</div>
+          <div class="stat-label">Added</div>
+        </div>
+        <div class="stat yellow">
+          <div class="stat-num" id="dupCount">0</div>
+          <div class="stat-label">Duplicates</div>
+        </div>
+        <div class="stat red">
+          <div class="stat-num" id="skipCount">0</div>
+          <div class="stat-label">Skipped</div>
+        </div>
+      </div>
+
+      <div class="log-label">Activity Log</div>
+      <div class="log" id="log"></div>
+
+      <a href="/download" class="download-btn" id="downloadBtn">
+        ⬇ Download Updated Tracker
+      </a>
+    </div>
+
+    <div class="footer">
+      Built by Samin Chowdhury · Courtney Lab · UC San Diego Health
+    </div>
+
+  </div>
+
+  <script>
+    const csvInput = document.getElementById('csvInput');
+    const excelInput = document.getElementById('excelInput');
+    const csvZone = document.getElementById('csvZone');
+    const excelZone = document.getElementById('excelZone');
+    const runBtn = document.getElementById('runBtn');
+    const progress = document.getElementById('progress');
+    const results = document.getElementById('results');
+    const log = document.getElementById('log');
+
+    function checkReady() {
+      runBtn.disabled = !(csvInput.files.length && excelInput.files.length);
+    }
+
+    csvInput.addEventListener('change', () => {
+      if (csvInput.files.length) {
+        csvZone.classList.add('selected');
+        csvZone.querySelector('.label').textContent = csvInput.files[0].name;
+      }
+      checkReady();
+    });
+
+    excelInput.addEventListener('change', () => {
+      if (excelInput.files.length) {
+        excelZone.classList.add('selected');
+        excelZone.querySelector('.label').textContent = excelInput.files[0].name;
+      }
+      checkReady();
+    });
+
+    runBtn.addEventListener('click', async () => {
+      const form = new FormData();
+      form.append('csv', csvInput.files[0]);
+      const overwrite = document.getElementById('overwriteToggle').checked;
+      form.append('overwrite', overwrite);
+      form.append('excel', excelInput.files[0]);
+
+      runBtn.disabled = true;
+      progress.style.display = 'flex';
+      results.style.display = 'none';
+      log.innerHTML = '';
+
+      const res = await fetch('/run', { method: 'POST', body: form });
+      const data = await res.json();
+
+      progress.style.display = 'none';
+
+      document.getElementById('addedCount').textContent = data.added.length;
+      document.getElementById('dupCount').textContent = data.duplicates.length;
+      document.getElementById('skipCount').textContent = data.skipped.length;
+
+      data.added.forEach(r => {
+        log.innerHTML += `<div class="log-line added">
+          <span class="tag">✅ ADDED</span>
+          <span class="info">${r.name}</span>
+          <span class="sheet">→ ${r.sheet} (row ${r.row})</span>
+        </div>`;
+      });
+
+      data.duplicates.forEach(r => {
+        log.innerHTML += `<div class="log-line dup">
+          <span class="tag">⚠ DUPE</span>
+          <span class="info">${r.name} — ${r.phone}</span>
+        </div>`;
+      });
+
+      data.skipped.forEach(r => {
+        log.innerHTML += `<div class="log-line skip">
+          <span class="tag">✗ SKIP</span>
+          <span class="info">${r.name} — ${r.reason}</span>
+        </div>`;
+      });
+
+      results.style.display = 'block';
+      document.getElementById('downloadLink').href = '/download?overwrite=' + overwrite;
+      runBtn.disabled = false;
+    });
+  </script>
+</body>
+</html>
+<script>
+// Patch: inject overwrite toggle and update fetch call
+document.addEventListener('DOMContentLoaded', () => {
+  // This is handled in the main script above
+});
+</script>
